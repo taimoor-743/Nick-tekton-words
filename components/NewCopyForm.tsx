@@ -43,12 +43,8 @@ export default function NewCopyForm() {
       }
 
       // Call n8n webhook
-      const webhookUrl = process.env.NEXT_PUBLIC_INPUT_WEBHOOK_URL
-      if (!webhookUrl) {
-        throw new Error('Webhook URL not configured')
-      }
-
-      const callbackUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/callback`
+      const webhookUrl = 'https://n8n.srv833939.hstgr.cloud/webhook-test/5370bc4e-6508-4bed-b370-57fd35575f78'
+      const callbackUrl = 'https://words.tektongrowth.com/api/callback'
       
       const response = await fetch(webhookUrl, {
         method: 'POST',
