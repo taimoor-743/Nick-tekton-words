@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import Button from './Button'
+import Toast from './Toast'
 import { supabase } from '@/lib/supabase'
 import { v4 as uuidv4 } from 'uuid'
 
@@ -13,7 +14,9 @@ export default function NewCopyForm() {
   const [outputLink, setOutputLink] = useState('')
   const [error, setError] = useState('')
   const [currentRequestId, setCurrentRequestId] = useState<string | null>(null)
-  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  const [showToast, setShowToast] = useState(false)
+  const [toastMessage, setToastMessage] = useState('')
+  const [toastType, setToastType] = useState<'success' | 'info' | 'warning' | 'error'>('info')
 
   const handleGenerate = async () => {
     if (!businessDetails.trim() || !websiteStructure.trim()) return
@@ -63,55 +66,28 @@ export default function NewCopyForm() {
         throw new Error('Failed to send request to n8n')
       }
 
-      // Start polling
-      startPolling(requestId)
+      // Show success toast and reset form
+      setToastMessage('Request sent successfully! Check the History tab for results in 2-3 minutes.')
+      setToastType('success')
+      setShowToast(true)
+      
+      // Reset form
+      setBusinessDetails('')
+      setWebsiteStructure('')
+      setIsGenerating(false)
+      setCurrentRequestId(null)
 
     } catch (err) {
       console.error('Generation error:', err)
-      setError(err instanceof Error ? err.message : 'An error occurred')
+      setToastMessage(err instanceof Error ? err.message : 'An error occurred')
+      setToastType('error')
+      setShowToast(true)
       setIsGenerating(false)
       setCurrentRequestId(null)
     }
   }
 
-  const startPolling = (requestId: string) => {
-    pollingIntervalRef.current = setInterval(async () => {
-      try {
-        const { data, error } = await supabase
-          .from('requests')
-          .select('status, output_link, error_message')
-          .eq('id', requestId)
-          .single()
 
-        if (error) {
-          console.error('Polling error:', error)
-          return
-        }
-
-        if (data.status === 'ready' && data.output_link) {
-          setOutputLink(data.output_link)
-          setHasResult(true)
-          setIsGenerating(false)
-          setCurrentRequestId(null)
-          stopPolling()
-        } else if (data.status === 'error') {
-          setError(data.error_message || 'Generation failed')
-          setIsGenerating(false)
-          setCurrentRequestId(null)
-          stopPolling()
-        }
-      } catch (err) {
-        console.error('Polling error:', err)
-      }
-    }, 2000)
-  }
-
-  const stopPolling = () => {
-    if (pollingIntervalRef.current) {
-      clearInterval(pollingIntervalRef.current)
-      pollingIntervalRef.current = null
-    }
-  }
 
   const handleReset = () => {
     setBusinessDetails('')
@@ -121,19 +97,27 @@ export default function NewCopyForm() {
     setOutputLink('')
     setError('')
     setCurrentRequestId(null)
-    stopPolling()
   }
 
-  useEffect(() => {
-    return () => {
-      stopPolling()
-    }
-  }, [])
+  const handleToastClose = () => {
+    setShowToast(false)
+  }
+
+
 
   const isFormValid = businessDetails.trim() && websiteStructure.trim()
 
   return (
     <div className="max-w-4xl space-y-8">
+      {/* Toast Notification */}
+      {showToast && (
+        <Toast
+          message={toastMessage}
+          type={toastType}
+          onClose={handleToastClose}
+        />
+      )}
+      
       {/* Form */}
       <div className="space-y-6">
         <div>
@@ -169,59 +153,21 @@ export default function NewCopyForm() {
             loading={isGenerating}
             size="lg"
           >
-            {isGenerating ? 'Generating copy...' : 'Generate Copy'}
+            {isGenerating ? 'Sending Request...' : 'Generate Copy'}
           </Button>
-          
-          {hasResult && (
-            <Button
-              onClick={handleReset}
-              variant="outline"
-              size="lg"
-            >
-              Generate New
-            </Button>
-          )}
         </div>
       </div>
 
-      {/* Error Display */}
-      {error && (
-        <div className="border border-red-200 rounded-xl p-6 bg-red-50">
-          <h3 className="text-lg font-semibold text-red-900 mb-2">Error</h3>
-          <p className="text-red-700">{error}</p>
-          <p className="text-sm text-red-600 mt-2">Please check your n8n workflow logs for more details.</p>
+      {/* Instructions */}
+      <div className="border border-blue-200 rounded-xl p-6 bg-blue-50">
+        <h3 className="text-lg font-semibold text-blue-900 mb-4">How it works</h3>
+        <div className="space-y-3 text-blue-800">
+          <p className="text-sm">1. Fill out the form above with your business details and website structure</p>
+          <p className="text-sm">2. Click "Generate Copy" to send your request</p>
+          <p className="text-sm">3. Check the <strong>History tab</strong> to see your results (usually ready in 2-3 minutes)</p>
+          <p className="text-sm">4. All your requests are saved and can be viewed anytime in the History section</p>
         </div>
-      )}
-
-      {/* Output Section */}
-      {hasResult && outputLink && (
-        <div className="border border-zinc-200 rounded-xl p-6 bg-zinc-50">
-          <h3 className="text-lg font-semibold text-zinc-900 mb-4">Generated Copy</h3>
-          <div className="bg-white border border-zinc-200 rounded-lg p-4">
-            <div className="flex items-center justify-between">
-              <p className="text-zinc-600">Your copy has been generated successfully!</p>
-              <Button
-                onClick={() => {
-                  navigator.clipboard.writeText(outputLink)
-                  // You could add a toast notification here
-                }}
-                variant="secondary"
-                size="sm"
-              >
-                Copy Link
-              </Button>
-            </div>
-            <a 
-              href={outputLink} 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="text-cyan-600 hover:text-cyan-800 text-sm mt-2 inline-block"
-            >
-              View Generated Copy →
-            </a>
-          </div>
-        </div>
-      )}
+      </div>
 
       {/* Callback URL Display */}
       <div className="border border-zinc-200 rounded-xl p-6 bg-zinc-50">
@@ -236,3 +182,4 @@ export default function NewCopyForm() {
     </div>
   )
 }
+

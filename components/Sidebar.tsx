@@ -7,7 +7,7 @@ export default function Sidebar() {
   const pathname = usePathname()
 
   const navItems = [
-    { href: '/', label: 'New Copy' },
+    { href: '/', label: 'Website Copy Generator' },
     { href: '/history', label: 'History' },
   ]
 
@@ -16,7 +16,11 @@ export default function Sidebar() {
       {/* Logo Area */}
       <div className="p-6 border-b border-zinc-800">
         <div className="flex items-center space-x-3">
-          <div className="w-8 h-8 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-lg flex items-center justify-center">
+          {/* Replace this div with your logo image */}
+          <div className="w-10 h-10 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-lg flex items-center justify-center">
+            {/* Option 1: If you have a logo image, replace the span with: */}
+            {/* <img src="/your-logo.png" alt="Logo" className="w-full h-full object-contain" /> */}
+            {/* Option 2: Keep the current placeholder or customize the text */}
             <span className="text-white font-bold text-sm">TG</span>
           </div>
           <div>
